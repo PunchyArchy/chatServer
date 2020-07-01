@@ -130,8 +130,12 @@ class WChatServer(WListener):
 	def getOldParseMsgs(self, allMsgs):
 		newlog = ''
 		for msg in allMsgs:
+			if msg[4] == 'f':
+				ifRead = 'Not Read'
+			else:
+				ifRead = 'READ'
 			newlog += msg[0] + cfg.endFrSpl + msg[2] + cfg.endFrSpl + msg[3]
-			newlog += cfg.endFrSpl + ifRead
+			newlog += cfg.endFrSpl + ifRead + cfg.endMsgSpl
 		return newlog
 
 	def chatInterface(self, conn):
