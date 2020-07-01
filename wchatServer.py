@@ -1,16 +1,19 @@
 from wlistener import WListener
 import socket, threading, pickle, os
-import wsettings as s
+import wchat_config as cfg
+from wsqluse import WSQLshell
 
 
 class WChatServer(WListener):
 	def __init__(self,name='def', comnum='25', port='1488', bs = 8, py = 'N',
-		sb = 1, to = 1, ip='localhost', sqlshell='none'):
+		sb = 1, to = 1, ip='localhost'):
 		WListener.__init__(self, name, comnum, port, bs, py, sb, to, ip)
 		# Словарь где будет инфа, кто сколько отправил непрочитанных сообщений
 		self.sentNotReadMsgs = {}
 		rootdir = os.getcwd()
 		self.statusFile = rootdir + '/wstat.cfg'
+		# подключение к БД
+		self.sqlshell = WSQLshell(cfg.dbName, cfg.dbUser, cfg.dbPw, cfg.dbIp)
 		try:
 			self.getStatus()
 		except:
@@ -93,59 +96,87 @@ class WChatServer(WListener):
 	def serverApi(self, conn):
 		while True:
 			data = conn.recv(1024)
-			command = data.decode()
-			if len(command) > 1:
+			comm = picke.loads(data)
+			print('command', comm)
+			for command in list(comm.keys()):
 				print('Основное тело цикла сервер АПИ')
 				if command == 'getChat':
-					conn.send(b"trash")
-					print('getChat got', command)
+					#conn.send(b"trash")
+					#print('getChat got', command)
 					self.chatInterface(conn)
-				elif command == 'getStatus':
-					print('getStatus got', command)
-					status = pickle.dumps(self.sentNotReadMsgs)
-					conn.send(status)
+				elif command == 'sendMsg':
+					print('sendMsg got', command)
+					self.createNewMsg(comm.values())
+					#UPDATE RECIEVER!
 				else:
 					print('got unidentified command', command)
+
+	def createNewMsg(self, msgs):
+		'''Парсер новых сообщений. Получает новое сообщение и парсит его'''
+		for msg in list(msgs):
+			template = ('sender', 'destination', 'message', 'date', 'ifread')
+			values = ("'{}'","'{}'","'{}'", date, 'false')
+			values = values.format(msg['sender'], msg['destination'],
+				msg['message'])
+			self.sqlsehll.сreate_str(self, cfg.msgTable, template, values)
+
+	def getSortedMsgs(self, allMsgs):
+		allMsgs.sort(key=self.takeDate)
+		return allMsgs
+
+	def takeDate(self, msg):
+		return msg[1]
+
+	def getOldParseMsgs(self, allMsgs):
+		newlog = ''
+		for msg in allMsgs:
+			newlog += msg[0] + cfg.endFrSpl + msg[2] + cfg.endFrSpl + msg[3]
+			newlog += cfg.endFrSpl + ifRead
+		return newlog
 
 	def chatInterface(self, conn):
 		'''Сервер обмена сообщениями
 		1. Клиент подключается, указав свой логин
-		2. Сервер ждет id чата
-		3. Получив id отправляет ему id чата'''
+		2. Сервер ждет комманду
+		3.1 Получив id отправляет ему id чата
+		3.2 Получив изменение высылает ему изменения'''
 		while True:
 			print('Есть подключение к серверу сообщений. Ждем логин')
 			data = conn.recv(1024)
 			data = data.decode()
-			requester = data
-			usrIdSpl = ';'
-			endMsgSpl = '  END&MSG  '
-			endFrSpl = '  FRAG&END  '
-			metaDataSpl = '  META&DATA  '
-			requester = data.split(usrIdSpl)[0]
-			chatid = data.split(usrIdSpl)[1]
+			requester = data.split(cfg.usrIdSpl)[0]
+			chatid = data.split(cfg.usrIdSpl)[1]
 			print('\nrequester -', requester)
-			#print('chatid -', chatid)
 			print('chatid -', chatid)
-			totalMsgs = self.getTotalMsgs(chatid)
-			logfilepath = '/home/watchman/chatServer/chatlogs/log_{}id.txt'.format(chatid)
+		#	totalMsgs = self.getTotalMsgs(chatid)
+			#logfilepath = '/home/watchman/chatServer/chatlogs/log_{}id.txt'.format(chatid)
+			ident = "chatId = '{}'".format(chatid)
+			spec = 'sender, destination, message, date'
+			allMsgs = self.sqlshel.get_special_ident(cfg.msgTable, spec, ident)
+			allMsgs = self.getSortedMsgs()
+			# OLD PARSING EMULATING
+			newlog = self.getOldParseMsgs(allMsgs)
+			chatdata = pickle.dumps(newlog)
+			conn.send(chatdata)
+			'''
 			try:
 				logfile = open(logfilepath, 'r')
 				chatdata = logfile.read()
-				chatdata = chatdata.split(endMsgSpl)
+				chatdata = chatdata.split(cfg.endMsgSpl)
 				newmsgs = []
 				for msg in chatdata:
 					#print('data from new func', data)
-					data = msg.split(endFrSpl)
+					data = msg.split(cfg.endFrSpl)
 					print('msg is', msg)
 					print('data is', data)
 					if len(data) > 2:
 						print('data from new func', data)
 						new_data = self.dicremCount(data, chatid, requester)
-						new_msg = endFrSpl.join(data)
+						new_msg = cfg.endFrSpl.join(data)
 						print('new msg - ', new_msg)
 						newmsgs.append(new_msg)
 				self.saveStatus()
-				newlog = endMsgSpl.join(newmsgs)
+				newlog = cfg.endMsgSpl.join(newmsgs)
 				print('newlog is', newlog)
 				chatdata = pickle.dumps(newlog)
 				conn.send(chatdata)
@@ -155,9 +186,6 @@ class WChatServer(WListener):
 				logfile = open(logfilepath, 'w')
 				logfile.write(newlog)
 				logfile.close()
-				#chatdata =
-					#msgStatus = data[1]
-					#if msgStatus == 'NOT READ:
 			except FileNotFoundError:
 				chatdata = b''
 				chatdata = pickle.dumps(chatdata)
@@ -172,13 +200,14 @@ class WChatServer(WListener):
 				print('Есть сообщение!', data)
 				conn.send(data)
 				data = pickle.loads(data)
-				msg = endMsgSpl + data['username'] + endFrSpl
-				msg += data['data'] + endFrSpl + data['time']
-				msg += endFrSpl + 'NOT READ'
+				msg = cfg.endMsgSpl + data['username'] + cfg.endFrSpl
+				msg += data['data'] + cfg.endFrSpl + data['time']
+				msg += cfg.endFrSpl + 'NOT READ'
 				self.incremCount(data, chatid, totalMsgs)
 				logfile.write(msg)
 				logfile.close()
 			conn.close()
+			'''
 
 	def incremDbCount(self, chatid, totalMsgs):
 		'''Увеличивает totalMsgs в базе данных'''

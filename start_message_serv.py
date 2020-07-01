@@ -3,11 +3,9 @@ import threading, os,sys
 sys.path.append('/home/watchman/.local/lib/python3.8/site-packages')
 print(sys.path)
 from wsqluse import WSQLshell
-import wsettings as s
-import wchat_config as wc
+import wchat_config as cfg
 
-sqlshell = WSQLshell(s.db_name, s.db_user, s.db_pass, s.db_location)
-tcpServer = WChatServer(port=wc.port, ip=wc.ip,sqlshell=sqlshell)
+tcpServer = WChatServer(port=cfg.port, ip=cfg.ip)
 print(wc.ip,wc.port)
 try:
 	threading.Thread(target=tcpServer.tcpLoggingServ, args=()).start()

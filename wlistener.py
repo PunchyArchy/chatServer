@@ -1,7 +1,7 @@
 import socket, logging, pickle, threading
 from time import sleep
 from traceback import format_exc
-import wsettings as s
+#import wsettings as s
 
 class WListener():
 	'''Прослушиватель ком портов, к которым линкуются периферийные
@@ -22,21 +22,7 @@ class WListener():
 		self.addInfo = {'carnum':'none', 'status':'none','notes':'none'}
 		self.cmInterfaceComms = []
 		self.activity = True
-		#if s.cmUseInterfaceOn == True:
-			#print('Интерфейс взаимодействия с Watchman-CM активирован')
-			#threading.Thread(target=self.cmUseInterface, args=()).start()
-	'''
-	def wlisten(self):
-		По строково читает приходящие значения и
-			сохраняет последнее значение в переменную self.rval
-		ser = serial.Serial(self.comnum, bytesize=self.bs,
-			parity=self.py, stopbits=self.sb, timeout=self.to)
-		sleep(0.5)
-		self.w
-data = ser.readline()
-		ser.close()
-		return self.data
-	'''
+
 	def wlisten_tcp(self):
 		try:
 			return self.smlist[-1]
@@ -119,7 +105,6 @@ data = ser.readline()
 		serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		serv.bind((s.statusSocketIp, s.statusSocketPort))
 		serv.listen(1997)
-		#print('c0')
 		while True:
 			try:
 				conn,addr = serv.accept()
@@ -211,8 +196,3 @@ data = ser.readline()
 if __name__ == "__main__":
 	scale = WListener('scale', 'COM11', 1337)
 	scale.tcp_listener_server()
-
-
-	#scale.tcp_listener_client()
-# while 1:
-		# scale.wlisten()
