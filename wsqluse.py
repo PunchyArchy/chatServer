@@ -177,13 +177,14 @@ class WSQLshell():
 				return v
 
 if __name__ == '__main__':
-	sqlshell = WSQLshell('chatdb','admin','hect0r1337','192.168.100.118')
+	sqlshell = WSQLshell('chatdb','admin','hect0r1337','localhost')
 	#sqlshell.save_db_txt('ЖурналПосещений')
 	ident2 = "НомерАвто='а123ам102'"
 	ident1 = "НаТерритории='no'"
 	#lv = sqlshell.get_last_visit('ЖурналПосещений', idenFt1, ident2)
 	#lv = sqlshell.get_all_ident(s.book, ident1)
-	lv = sqlshell.get_all('Пользователи')
+	#lv = sqlshell.get_all('Пользователи')
+	sqlshell.create_str('')
 	print(lv)
 	#print('f')
 	#sqlshell.save_db_txt('ЖурналПосещений')

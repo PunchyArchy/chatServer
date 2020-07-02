@@ -1,4 +1,4 @@
-ip = '192.168.1.100'
+ip = '192.168.100.118'
 port = 2295
 usrIdSpl = ';'
 endMsgSpl = '  END&MSG  '
