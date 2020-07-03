@@ -86,6 +86,7 @@ class WChatServer(WListener):
 
 	def tcpLoggingServ(self):
 		self.dispatcher()
+		self.updDispatcher()
 
 	def dispatcher(self):
 		serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -98,12 +99,25 @@ class WChatServer(WListener):
 			self.shownMessages = []
 			threading.Thread(target=self.serverApi, args=(conn,)).start()
 
+	def updDistpathcer(self):
+		serv = socket.socket()
+		serv.bind((self.ip, self.updPort))
+		serv.listen(1024)
+		while True:
+			print('\nСервер отправки обновлений запущен.')
+			conn, addr = serv.accept()
+			print('Есть клиент')
+			self.shownMessages = {conn:[]}
+			threading.Thread(target=self.updSender, args=(conn,)).start()
+
 	def getData(self,conn):
 		print('Получение данных')
 		data = conn.recv(1024)
-		data = pickle.loads(data)
-		print('Данные получены', data)
-		return data
+		#print('data ', data)
+		if len(data) > 0:
+			data = pickle.loads(data)
+			print('Данные получены', data)
+			return data
 	
 	def sendData(self, conn, data):
 		print('Отправка данных', data)
@@ -120,26 +134,25 @@ class WChatServer(WListener):
 			print('Ждем комманду от клиента')
 			comm = self.getData(conn)
 			print('command', comm)
-			for command, info in comm.items():
-				print('Основное тело цикла сервер АПИ')
-				if command == 'getChat':
-					self.chatInterface(conn, info)
-				elif command == 'sendMsg':
-					print('sendMsg got', command)
-					self.createNewMsg(info)
-					#UPDATE RECIEVER!
-				elif command == 'getUpd':
-					self.sendUpd(conn, info)
-				else:
-					print('got unidentified command', command)
+			if type(comm) == dict:
+				for command, info in comm.items():
+					print('Основное тело цикла сервер АПИ')
+					if command == 'getChat':
+						self.chatInterface(conn, info)
+					elif command == 'sendMsg':
+						print('sendMsg got', command)
+						self.createNewMsg(info)
+						#UPDATE RECIEVER!
+					#elif command == 'getUpd':
+						#self.sendUpd(conn, info)
+					else:
+						print('got unidentified command', command)
 
-	def sendUpd(self, conn, info):
+	def updSener(self, conn):
 		upd = {}
 		username = info['username']
-		#try: ifUpd = self.ifUpdate[username]
-		#except KeyError: ifUpd = False
-		#print('ifUpd - ', ifUpd)
-		#self.ifUpd =
+		data = self.getData(conn)
+		info = list(data.values())[0]
 		ifUpd = True
 		if ifUpd == True:
 			#chatid = info['chatId']
@@ -147,13 +160,11 @@ class WChatServer(WListener):
 			ident2 = "ifread='false'"
 			print('Получаем все непрочитанные сообщения пользователя')
 			allunreadmsgs = self.sqlshell.get_all_2idents(cfg.msgTable, ident, ident2)
-			notShownMsgs = list(set(allunreadmsgs) - set(self.shownMessages))
+			notShownMsgs = list(set(allunreadmsgs) - set(self.shownMessages[conn]))
 			upd['unreadMsgs'] = notShownMsgs
-			#upd['count'] = len(allunreadmsgs)
-			#if len(notShownMsgs) > 0:
 			self.sendData(conn, upd)
 			for msg in allunreadmsgs:
-				self.shownMessages.append(msg)
+				self.shownMessages[conn].append(msg)
 			#self.ifUpdate[username] = False
 		else:
 			self.sendData(conn, 'noUpd')

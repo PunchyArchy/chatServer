@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/home/watchman/.local/lib/python3.8/site-packages')
 import psycopg2
 import wsettings as s
 from datetime import datetime
