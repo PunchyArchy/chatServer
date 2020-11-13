@@ -34,7 +34,7 @@ class WSQLshell():
 
 	def get_all_2idents(self, tablename, ident1, ident2):
 		cursor = self.create_get_cursor()
-		cursor.execute('select * from {} where {}'.format(tablename,
+		cursor.execute('select * from {} where {} and {}'.format(tablename,
 			ident1, ident2))
 		records = cursor.fetchall()
 		cursor.close()
@@ -181,12 +181,16 @@ class WSQLshell():
 if __name__ == '__main__':
 	sqlshell = WSQLshell('chatdb','admin','hect0r1337','localhost')
 	#sqlshell.save_db_txt('ЖурналПосещений')
-	ident2 = "НомерАвто='а123ам102'"
-	ident1 = "НаТерритории='no'"
+	#ident2 = "НомерАвто='а123ам102'"
+	#ident1 = "НаТерритории='no'"
 	#lv = sqlshell.get_last_visit('ЖурналПосещений', idenFt1, ident2)
 	#lv = sqlshell.get_all_ident(s.book, ident1)
 	#lv = sqlshell.get_all('Пользователи')
-	sqlshell.create_str('')
+	#sqlshell.create_str('')
+	username = 'usual'
+	ident = "destination='{}'".format(username)
+	ident2 = "ifread=False"
+	lv =  sqlshell.get_all_2idents('messages', ident, ident2)
 	print(lv)
 	#print('f')
 	#sqlshell.save_db_txt('ЖурналПосещений')

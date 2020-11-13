@@ -9,5 +9,6 @@ tcpServer = WChatServer(port=cfg.port, ip=cfg.ip)
 #print(wc.ip,wc.port)
 try:
 	threading.Thread(target=tcpServer.tcpLoggingServ, args=()).start()
+	threading.Thread(target=tcpServer.updDispatcher, args=()).start()
 except KeyboardInterrupt:
 	os._exit()

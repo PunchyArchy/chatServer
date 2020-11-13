@@ -3,6 +3,7 @@ import socket, threading, pickle, os
 import wchat_config as cfg
 from wsqluse import WSQLshell
 from datetime import datetime
+from time import sleep
 
 class WChatServer(WListener):
 	def __init__(self,name='def', comnum='25', port='1488', bs = 8, py = 'N',
@@ -14,6 +15,7 @@ class WChatServer(WListener):
 		self.date_pattern = '%d.%m.%y %H:%M:%S'
 		self.statusFile = rootdir + '/wstat.cfg'
 		self.connectedUsrs = {}
+		self.shownMessages = {}
 		#self.shownMessages = []
 		self.ifUpdate = {}
 		# подключение к БД
@@ -86,7 +88,7 @@ class WChatServer(WListener):
 
 	def tcpLoggingServ(self):
 		self.dispatcher()
-		self.updDispatcher()
+		#self.updDispatcher()
 
 	def dispatcher(self):
 		serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -96,18 +98,18 @@ class WChatServer(WListener):
 			print('\n\nСервер сообщений запущен.')
 			conn, addr = serv.accept()
 			print('Есть клиент')
-			self.shownMessages = []
+			#self.shownMessages = []
 			threading.Thread(target=self.serverApi, args=(conn,)).start()
 
-	def updDistpathcer(self):
+	def updDispatcher(self):
 		serv = socket.socket()
-		serv.bind((self.ip, self.updPort))
+		serv.bind((self.ip, cfg.updPort))
 		serv.listen(1024)
 		while True:
 			print('\nСервер отправки обновлений запущен.')
 			conn, addr = serv.accept()
 			print('Есть клиент')
-			self.shownMessages = {conn:[]}
+			self.shownMessages[conn] = []
 			threading.Thread(target=self.updSender, args=(conn,)).start()
 
 	def getData(self,conn):
@@ -134,6 +136,7 @@ class WChatServer(WListener):
 			print('Ждем комманду от клиента')
 			comm = self.getData(conn)
 			print('command', comm)
+			if not comm: break
 			if type(comm) == dict:
 				for command, info in comm.items():
 					print('Основное тело цикла сервер АПИ')
@@ -148,26 +151,45 @@ class WChatServer(WListener):
 					else:
 						print('got unidentified command', command)
 
-	def updSener(self, conn):
+	def updSender(self, conn):
 		upd = {}
-		username = info['username']
-		data = self.getData(conn)
-		info = list(data.values())[0]
-		ifUpd = True
-		if ifUpd == True:
+		#username = info['username']
+		while True:
+			data = self.getData(conn)
+			if not data: break
+			info = list(data.values())[0]
+			username = info['username']
 			#chatid = info['chatId']
 			ident = "destination='{}'".format(username)
-			ident2 = "ifread='false'"
+			ident2 = "ifread=False"
 			print('Получаем все непрочитанные сообщения пользователя')
 			allunreadmsgs = self.sqlshell.get_all_2idents(cfg.msgTable, ident, ident2)
+			print('allunread', allunreadmsgs)
 			notShownMsgs = list(set(allunreadmsgs) - set(self.shownMessages[conn]))
 			upd['unreadMsgs'] = notShownMsgs
+			#while True:
+			#if len(upd['unreadMsgs']) > 0:
 			self.sendData(conn, upd)
 			for msg in allunreadmsgs:
 				self.shownMessages[conn].append(msg)
+			#	break
+				#else: 
+				#	sleep(1)
+				#	print('Нет обновлений для отправки')
+				#	try: self.sendData(conn, upd)
+				#	except: 
+				#		print('Клиент отключился')
+				#		break
+		#	break
+					#print(dir(conn))
+					#data = self.getData(conn)
+					#newusr = list(data.values())[0]['username']
+					#if newusr != username:
+						#break
 			#self.ifUpdate[username] = False
-		else:
-			self.sendData(conn, 'noUpd')
+		#else:
+			#self.sendData(conn, 'noUpd')
+
 	def getTimeNow(self):
 		now = datetime.now()
 		now = now.strftime(self.date_pattern)
@@ -188,13 +210,13 @@ class WChatServer(WListener):
 		return allMsgs
 
 	def takeDate(self, msg):
-		return msg[1]
+		return msg[3]
 
 	def getOldParseMsgs(self, allMsgs):
 		newlog = ''
 		print('allMsgs', allMsgs)
 		for msg in allMsgs:
-			print('msg',msg)
+			#print('msg',msg)
 			if msg[4] == 'f':
 				ifRead = 'Not Read'
 			else:
@@ -220,9 +242,10 @@ class WChatServer(WListener):
 			print('sorted allMsgs', allMsgs)
 			# OLD PARSING EMULATING
 			newlog = self.getOldParseMsgs(allMsgs)
+			print('new log is', newlog)
 			readMsgs = []
 			for msg in allMsgs:
-				print('msg -',msg)
+				#print('msg -',msg)
 				if msg[0] != info['login'] and msg[4] == False:
 					readMsgs.append(msg[5])
 			ident1 = ''
